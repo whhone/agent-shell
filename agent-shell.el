@@ -845,7 +845,23 @@ Flow:
            (agent-shell--update-fragment
             :state state
             :block-id "Notification - fallback"
-            :body (format "Unhandled (please file an issue): %s" notification)
+            :body (format "Unhandled notification (%s) and include:
+
+```json
+%s
+```"
+                          (agent-shell-ui-add-action-to-text
+                           "please file a feature request"
+                           (lambda ()
+                             (interactive)
+                             (browse-url "https://github.com/xenodium/agent-shell/issues/new/choose"))
+                           (lambda ()
+                             (message "Press RET to open URL"))
+                           'link)
+                          (with-temp-buffer
+                            (insert (json-serialize notification))
+                            (json-pretty-print (point-min) (point-max))
+                            (buffer-string)))
             :create-new t
             :navigation 'never)
            (map-put! state :last-entry-type nil)))))
