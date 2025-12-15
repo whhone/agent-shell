@@ -349,6 +349,7 @@ HEARTBEAT, and AUTHENTICATE-REQUEST-MAKER."
         (cons :request-count 0)
         (cons :tool-calls nil)
         (cons :available-commands nil)
+        (cons :available-modes nil)
         (cons :prompt-capabilities nil)
         (cons :pending-requests nil)))
 
@@ -829,8 +830,7 @@ Flow:
                  (message "Session mode: %s"
                           (agent-shell--resolve-session-mode-name
                            new-mode-id
-                           (map-nested-elt (agent-shell--state)
-                                           '(:session :modes))))
+                           (agent-shell--get-available-modes state)))
                  ;; Note: No need to set :last-entry-type as no text was inserted.
                  (agent-shell--update-header-and-mode-line)))
               (t
@@ -1825,7 +1825,7 @@ BINDINGS is a list of alists defining key bindings to display, each with:
          (mode-name (when-let ((mode-id (map-nested-elt state '(:session :mode-id))))
                       (or (agent-shell--resolve-session-mode-name
                            mode-id
-                           (map-nested-elt state '(:session :modes)))
+                           (agent-shell--get-available-modes state))
                           (map-nested-elt state '(:session :mode-id)))))
          (text-header (format " %s%s%s @ %s"
                               (propertize (concat (map-nested-elt state '(:agent-config :buffer-name)) " Agent")
@@ -2193,6 +2193,15 @@ Must provide ON-INITIATED (lambda ())."
                      (map-put! agent-shell--state :prompt-capabilities
                                (list (cons :image (map-elt prompt-capabilities 'image))
                                      (cons :embedded-context (map-elt prompt-capabilities 'embeddedContext)))))
+                   ;; Save available modes from agent, converting to internal symbols
+                   (when-let ((modes (map-elt response 'modes)))
+                     (map-put! agent-shell--state :available-modes
+                               (list (cons :current-mode-id (map-elt modes 'currentModeId))
+                                     (cons :modes (mapcar (lambda (mode)
+                                                            `((:id . ,(map-elt mode 'id))
+                                                              (:name . ,(map-elt mode 'name))
+                                                              (:description . ,(map-elt mode 'description))))
+                                                          (map-elt modes 'availableModes))))))
                    (when-let ((agent-capabilities (map-elt response 'agentCapabilities)))
                      (agent-shell--update-fragment
                       :state agent-shell--state
@@ -2334,13 +2343,13 @@ Must provide ON-SESSION-INIT (lambda ())."
                     :label-left (propertize "Available models" 'font-lock-face 'font-lock-doc-markup-face)
                     :body (agent-shell--format-available-models
                            (map-nested-elt agent-shell--state '(:session :models)))))
-                 (when (map-nested-elt agent-shell--state '(:session :modes))
+                 (when (agent-shell--get-available-modes agent-shell--state)
                    (agent-shell--update-fragment
                     :state agent-shell--state
                     :block-id "available_modes"
                     :label-left (propertize "Available modes" 'font-lock-face 'font-lock-doc-markup-face)
                     :body (agent-shell--format-available-modes
-                           (map-nested-elt agent-shell--state '(:session :modes)))))
+                           (agent-shell--get-available-modes agent-shell--state))))
                  (agent-shell--update-header-and-mode-line)
                  (funcall on-session-init))
    :on-failure (agent-shell--make-error-handler
@@ -3614,6 +3623,17 @@ When DEACTIVATE is non-nil, deactivate region/selection."
 
 ;;; Session modes
 
+(defun agent-shell--get-available-modes (state)
+  "Get available modes list, preferring session modes over agent modes.
+
+STATE is the agent shell state.
+
+Returns the modes list from session if available, otherwise from
+the agent's available modes."
+  (or (map-nested-elt state '(:session :modes))
+      ;; Use agent-level availability as fallback.
+      (map-nested-elt state '(:available-modes :modes))))
+
 (defun agent-shell--resolve-session-mode-name (mode-id available-session-modes)
   "Get the name of the session mode with MODE-ID from AVAILABLE-SESSION-MODES.
 
@@ -3653,7 +3673,7 @@ For example: \" [Sonnet] [Accept Edits] ░░░ \"."
                           'help-echo (format "Model: %s" model-name)))
             (when-let ((mode-name (agent-shell--resolve-session-mode-name
                                    (map-nested-elt (agent-shell--state) '(:session :mode-id))
-                                   (map-nested-elt (agent-shell--state) '(:session :modes)))))
+                                   (agent-shell--get-available-modes (agent-shell--state)))))
               (propertize (format " [%s]" mode-name)
                           'face 'font-lock-type-face
                           'help-echo (format "Session Mode: %s" mode-name)))
@@ -3675,11 +3695,11 @@ Optionally, get notified of completion with ON-SUCCESS function."
     (user-error "Not in an agent-shell buffer"))
   (unless (map-nested-elt (agent-shell--state) '(:session :id))
     (user-error "No active session"))
-  (unless (map-nested-elt (agent-shell--state) '(:session :modes))
+  (unless (agent-shell--get-available-modes (agent-shell--state))
     (user-error "No session modes available"))
   (let* ((mode-ids (mapcar (lambda (mode)
                              (map-elt mode :id))
-                           (map-nested-elt (agent-shell--state) '(:session :modes))))
+                           (agent-shell--get-available-modes (agent-shell--state))))
          (mode-idx (or (seq-position mode-ids
                                      (map-nested-elt (agent-shell--state) '(:session :mode-id))
                                      #'string=) -1))
@@ -3698,8 +3718,7 @@ Optionally, get notified of completion with ON-SUCCESS function."
                      (message "Session mode: %s"
                               (agent-shell--resolve-session-mode-name
                                next-mode-id
-                               (map-nested-elt (agent-shell--state)
-                                               '(:session :modes)))))
+                               (agent-shell--get-available-modes (agent-shell--state)))))
                    (agent-shell--update-header-and-mode-line)
                    (when on-success
                      (funcall on-success)))
@@ -3715,17 +3734,17 @@ Optionally, get notified of completion with ON-SUCCESS function."
     (user-error "Not in an agent-shell buffer"))
   (unless (map-nested-elt (agent-shell--state) '(:session :id))
     (user-error "No active session"))
-  (unless (map-nested-elt (agent-shell--state) '(:session :modes))
+  (unless (agent-shell--get-available-modes (agent-shell--state))
     (user-error "No session modes available"))
   (let* ((current-mode-id (map-nested-elt (agent-shell--state) '(:session :mode-id)))
          (default-mode-name (and current-mode-id
                                  (agent-shell--resolve-session-mode-name
                                   current-mode-id
-                                  (map-nested-elt (agent-shell--state) '(:session :modes)))))
+                                  (agent-shell--get-available-modes (agent-shell--state)))))
          (mode-choices (mapcar (lambda (mode)
                                  (cons (map-elt mode :name)
                                        (map-elt mode :id)))
-                               (map-nested-elt (agent-shell--state) '(:session :modes))))
+                               (agent-shell--get-available-modes (agent-shell--state))))
          (selection (completing-read "Set session mode: "
                                      (mapcar #'car mode-choices)
                                      nil t nil nil default-mode-name))
@@ -3741,6 +3760,7 @@ Optionally, get notified of completion with ON-SUCCESS function."
      :request (acp-make-session-set-mode-request
                :session-id (map-nested-elt (agent-shell--state) '(:session :id))
                :mode-id selected-mode-id)
+     :buffer (current-buffer)
      :on-success (lambda (_response)
                    (let ((updated-session (map-elt (agent-shell--state) :session)))
                      (map-put! updated-session :mode-id selected-mode-id)
@@ -3748,8 +3768,7 @@ Optionally, get notified of completion with ON-SUCCESS function."
                      (message "Session mode: %s"
                               (agent-shell--resolve-session-mode-name
                                selected-mode-id
-                               (map-nested-elt (agent-shell--state)
-                                               '(:session :modes)))))
+                               (agent-shell--get-available-modes (agent-shell--state)))))
                    (agent-shell--update-header-and-mode-line)
                    (when on-success
                      (funcall on-success)))
