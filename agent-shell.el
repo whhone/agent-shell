@@ -419,22 +419,37 @@ handles viewport mode detection, existing shell reuse, and project context."
                                        (error "No agent config found")))
       (if (and (not new-shell)
                (derived-mode-p 'agent-shell-mode))
-          (agent-shell-toggle)
+          (let ((text (agent-shell--relevant-text)))
+            (agent-shell-toggle)
+            (when text
+              (agent-shell--insert-to-shell-buffer :text text)))
         (if-let ((existing-shell (seq-first (agent-shell-project-buffers))))
-            (agent-shell--display-buffer existing-shell)
+            (let ((text (agent-shell--relevant-text)))
+              (agent-shell--display-buffer existing-shell)
+              (when text
+                (agent-shell--insert-to-shell-buffer :text text)))
           (if-let ((other-project-shell (seq-first (agent-shell-buffers))))
               (if (y-or-n-p "No shells in project.  Start a new one? ")
-                  (agent-shell-start :config (or config
-                                                 agent-shell-preferred-agent-config
-                                                 (agent-shell-select-config
-                                                  :prompt "Start new agent: ")
-                                                 (error "No agent config found")))
-                (agent-shell--display-buffer other-project-shell))
-            (agent-shell-start :config (or config
-                                           agent-shell-preferred-agent-config
-                                           (agent-shell-select-config
-                                            :prompt "Start new agent: ")
-                                           (error "No agent config found")))))))))
+                  (let ((text (agent-shell--relevant-text)))
+                    (agent-shell-start :config (or config
+                                                   agent-shell-preferred-agent-config
+                                                   (agent-shell-select-config
+                                                    :prompt "Start new agent: ")
+                                                   (error "No agent config found")))
+                    (when text
+                      (agent-shell--insert-to-shell-buffer :text text)))
+                (let ((text (agent-shell--relevant-text)))
+                  (agent-shell--display-buffer other-project-shell)
+                  (when text
+                    (agent-shell--insert-to-shell-buffer :text text))))
+            (let ((text (agent-shell--relevant-text)))
+              (agent-shell-start :config (or config
+                                             agent-shell-preferred-agent-config
+                                             (agent-shell-select-config
+                                              :prompt "Start new agent: ")
+                                             (error "No agent config found")))
+              (when text
+                (agent-shell--insert-to-shell-buffer :text text)))))))))
 
 ;;;###autoload
 (defun agent-shell-toggle ()
