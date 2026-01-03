@@ -2221,7 +2221,7 @@ FORMAT-ARGS are passed to `format' with ERROR-FORMAT."
     nil))
 
 (cl-defun agent-shell--initialize-subscriptions (&key shell)
-  "Initialize ACP client subscriptions with SHELL.."
+  "Initialize ACP client subscriptions with SHELL."
   (agent-shell--update-fragment
    :state agent-shell--state
    :block-id "starting"
