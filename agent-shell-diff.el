@@ -58,7 +58,8 @@ Arguments:
                :description - Description for header line (e.g., \"next hunk\")
                :command     - Command function (e.g., `diff-hunk-next')
   :OLD-LABEL - Label for old content (default: \"before\")
-  :NEW-LABEL - Label for new content (default: \"after\")"
+  :NEW-LABEL - Label for new content (default: \"after\")
+  :FILE      - File path"
   (let* ((diff-buffer (generate-new-buffer "*agent-shell-diff*"))
          (calling-window (selected-window))
          (calling-buffer (current-buffer)))
@@ -152,7 +153,7 @@ Arguments:
                                     display-buffer-same-window))))))
 
 (defun agent-shell-diff--insert-diff (old new file buf)
-  "Create a unified diff between OLD and NEW strings.
+  "Insert diff from FILE between OLD and NEW strings in buffer BUF.
 Returns the diff output as a string."
   (let* ((suffix (format ".%s" (file-name-extension file)))
          (old-file (make-temp-file "old" nil suffix))
