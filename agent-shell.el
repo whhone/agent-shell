@@ -3109,12 +3109,12 @@ The captured screenshot file path is then inserted into the shell prompt."
 
 (defun agent-shell--completion-bounds (char-class trigger-char)
   "Find completion bounds for CHAR-CLASS, if TRIGGER-CHAR precedes them.
-Returns (start . end) if TRIGGER-CHAR is found before the word, nil otherwise."
+Returns alist with :start and :end if TRIGGER-CHAR is found before the word, nil otherwise."
   (save-excursion
-    (let ((end (progn (skip-chars-forward char-class) (point)))
-          (start (progn (skip-chars-backward char-class) (point))))
-      (when (eq (char-before start) trigger-char)
-        (cons start end)))))
+    (when-let* ((end (progn (skip-chars-forward char-class) (point)))
+                (start (progn (skip-chars-backward char-class) (point)))
+                ((eq (char-before start) trigger-char)))
+      `((:start . ,start) (:end . ,end)))))
 
 (defun agent-shell--capf-exit-with-space (_string _status)
   "Insert space after completion."
@@ -3124,7 +3124,7 @@ Returns (start . end) if TRIGGER-CHAR is found before the word, nil otherwise."
   "Complete project files after @."
   (when-let* ((bounds (agent-shell--completion-bounds "[:alnum:]/_.-" ?@))
               (files (agent-shell--project-files)))
-    (list (car bounds) (cdr bounds)
+    (list (map-elt bounds :start) (map-elt bounds :end)
           files
           :exclusive 'no
           :company-kind (lambda (f) (if (string-suffix-p "/" f) 'folder 'file))
@@ -3138,7 +3138,7 @@ Returns (start . end) if TRIGGER-CHAR is found before the word, nil otherwise."
                                       (cons (map-elt c 'name)
                                             (map-elt c 'description)))
                                     commands)))
-    (list (car bounds) (cdr bounds)
+    (list (map-elt bounds :start) (map-elt bounds :end)
           (mapcar #'car descriptions)
           :exclusive t
           :annotation-function

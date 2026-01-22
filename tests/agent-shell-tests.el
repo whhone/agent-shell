@@ -766,8 +766,8 @@ code block content with spaces
       (forward-char 1)
       (let ((bounds (agent-shell--completion-bounds path-chars ?@)))
         (should bounds)
-        (should (equal (car bounds) 2))  ; start after @
-        (should (equal (cdr bounds) 10)))) ; end of file.txt
+        (should (equal (map-elt bounds :start) 2))  ; start after @
+        (should (equal (map-elt bounds :end) 10)))) ; end of file.txt
 
     ;; Test with cursor in middle of word
     (with-temp-buffer
@@ -775,8 +775,8 @@ code block content with spaces
       (goto-char 8)
       (let ((bounds (agent-shell--completion-bounds path-chars ?@)))
         (should bounds)
-        (should (equal (car bounds) 2))
-        (should (equal (cdr bounds) 19))))
+        (should (equal (map-elt bounds :start) 2))
+        (should (equal (map-elt bounds :end) 19))))
 
     ;; Test returns nil when trigger character is missing
     (with-temp-buffer
@@ -791,8 +791,8 @@ code block content with spaces
       (goto-char 2) ; Right after @
       (let ((bounds (agent-shell--completion-bounds path-chars ?@)))
         (should bounds)
-        (should (equal (car bounds) 2))
-        (should (equal (cdr bounds) 2)))) ; Empty range
+        (should (equal (map-elt bounds :start) 2))
+        (should (equal (map-elt bounds :end) 2)))) ; Empty range
 
     ;; Test with text before trigger
     (with-temp-buffer
@@ -800,8 +800,8 @@ code block content with spaces
       (goto-char 12) ; In middle of README
       (let ((bounds (agent-shell--completion-bounds path-chars ?@)))
         (should bounds)
-        (should (equal (car bounds) 10))
-        (should (equal (cdr bounds) 19))))))
+        (should (equal (map-elt bounds :start) 10))
+        (should (equal (map-elt bounds :end) 19))))))
 
 (ert-deftest agent-shell--capf-exit-with-space-test ()
   "Test `agent-shell--capf-exit-with-space' function."
