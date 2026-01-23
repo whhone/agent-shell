@@ -1341,15 +1341,23 @@ Returns in the form:
                             ;; TODO: Is this needed?
                             ;; Isn't content always an alist?
                             ;; List content - find diff item
-                            ((listp content)
+                            ((and content (listp content))
                              (seq-find (lambda (item)
                                          (equal (map-elt item 'type) "diff"))
                                        content))
-                            ;; Copilot sends old_str/new_str in rawInput
+                            ;; Attempt to get from rawInput.
                             ((and raw-input (map-elt raw-input 'new_str))
                              `((oldText . ,(or (map-elt raw-input 'old_str) ""))
                                (newText . ,(map-elt raw-input 'new_str))
-                               (path . ,(map-elt raw-input 'path))))))
+                               (path . ,(map-elt raw-input 'path))))
+                            ;; Attempt diff from rawInput (eg. Copilot).
+                            ((and raw-input (map-elt raw-input 'diff))
+                             (let ((parsed (agent-shell--parse-unified-diff
+                                            (map-elt raw-input 'diff))))
+                               `((oldText . ,(car parsed))
+                                 (newText . ,(cdr parsed))
+                                 (path . ,(or (map-elt raw-input 'fileName)
+                                              (map-elt raw-input 'path))))))))
                 ;; oldText can be nil for Write tools creating new files, default to ""
                 ;; TODO: Currently don't have a way to capture overwrites
                 (old-text (or (map-elt diff-item 'oldText) ""))
@@ -1360,6 +1368,24 @@ Returns in the form:
               (when file-path
                 (list (cons :file file-path)))))))
 
+;; Based on https://github.com/editor-code-assistant/eca-emacs/blob/298849d1aae3241bf8828b6558c6deb45d75a3c8/eca-diff.el#L22
+(defun agent-shell--parse-unified-diff (diff-string)
+  "Parse unified DIFF-STRING into old and new text.
+Returns a cons cell (OLD-TEXT . NEW-TEXT)."
+  (let (old-lines new-lines in-hunk)
+    (dolist (line (split-string diff-string "\n"))
+      (cond
+       ((string-match "^@@.*@@" line)
+        (setq in-hunk t))
+       ((and in-hunk (string-prefix-p " " line))
+        (push (substring line 1) old-lines)
+        (push (substring line 1) new-lines))
+       ((and in-hunk (string-prefix-p "-" line))
+        (push (substring line 1) old-lines))
+       ((and in-hunk (string-prefix-p "+" line))
+        (push (substring line 1) new-lines))))
+    (cons (string-join (nreverse old-lines) "\n")
+          (string-join (nreverse new-lines) "\n"))))
 
 (defun agent-shell--format-diff-as-text (diff)
   "Format DIFF info as text suitable for display in tool call body.
