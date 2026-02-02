@@ -478,7 +478,7 @@ All of the above settings can be applied on a per-project basis using [[https://
 - =C-c C-c= - Interrupt current agent operation
 - =TAB and Shift-TAB= - Navigate interactive elements
 
-  To customize key binding, you can use something like:
+  To customize =RET= binding behaviour, you can use something like:
 
   #+begin_src emacs-lisp :lexical no
     (use-package agent-shell
@@ -487,7 +487,7 @@ All of the above settings can be applied on a per-project basis using [[https://
                   ("M-RET" . shell-maker-submit)))
   #+end_src
 
-  Or if you prefer C-c C-c to send and C-c C-k to interrupt, add the following remapping.
+  Or if you prefer C-c C-c to send and C-c C-k to interrupt, use the following:
 
   #+begin_src emacs-lisp :lexical no
     (use-package agent-shell
@@ -591,13 +591,16 @@ always go to Evil modes if you need to with ~C-z~).
 | agent-shell-opencode-environment              | Environment variables for the OpenCode client.                                  |
 | agent-shell-path-resolver-function            | Function for resolving remote paths on the local file-system, and vice versa.   |
 | agent-shell-permission-icon                   | Icon displayed when shell commands require permission to execute.               |
+| agent-shell-pi-command                        | Command and parameters for the Pi ACP client.                                   |
+| agent-shell-pi-environment                    | Environment variables for the Pi client.                                        |
 | agent-shell-prefer-viewport-interaction       | Non-nil makes ‘agent-shell’ prefer viewport interaction over shell interaction. |
-| agent-shell-preferred-agent-config            | Default configuration to use for all new shells.                                |
+| agent-shell-preferred-agent-config            | Default agent to use for all new shells.                                        |
 | agent-shell-qwen-authentication               | Configuration for Qwen Code authentication.                                     |
 | agent-shell-qwen-command                      | Command and parameters for the Qwen Code client.                                |
 | agent-shell-qwen-environment                  | Environment variables for the Qwen Code client.                                 |
 | agent-shell-screenshot-command                | The program to use for capturing screenshots.                                   |
 | agent-shell-section-functions                 | Abnormal hook run after overlays are applied (experimental).                    |
+| agent-shell-show-busy-indicator               | Non-nil to show the busy indicator animation in the header and mode line.       |
 | agent-shell-show-config-icons                 | Whether to show icons in agent config selection.                                |
 | agent-shell-show-welcome-message              | Non-nil to show welcome message.                                                |
 | agent-shell-text-file-capabilities            | Whether agents are initialized with read/write text file capabilities.          |
@@ -607,7 +610,7 @@ always go to Evil modes if you need to with ~C-z~).
 | agent-shell-transcript-file-path-function     | Function to generate the full transcript file path.                             |
 | agent-shell-ui-mode-hook                      | Hook run after entering or leaving ‘agent-shell-ui-mode’.                       |
 | agent-shell-user-message-expand-by-default    | Whether user message sections should be expanded by default.                    |
-| agent-shell-write-inhibit-minor-modes         | Minor modes to temporarily disable during agent file writes.                    |
+| agent-shell-write-inhibit-minor-modes         | List of minor mode commands to inhibit during ‘fs/write_text_file’ edits.       |
 
 * Commands
 #+BEGIN_SRC emacs-lisp :results table :colnames '("Binding" "Command" "Description") :exports results
