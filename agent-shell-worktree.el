@@ -141,10 +141,10 @@ The user is prompted to confirm or edit the worktree path before creation."
     (let ((output (shell-command-to-string
                    (format "git worktree add %s 2>&1"
                            (shell-quote-argument worktree-path)))))
-      (if (file-exists-p worktree-path)
-          (let ((default-directory worktree-path))
-            (agent-shell t))
-        (user-error "Failed to create worktree: %s" output)))))
+      (unless (file-exists-p worktree-path)
+        (user-error "Failed to create worktree: %s" output))
+      (let ((default-directory worktree-path))
+        (agent-shell t)))))
 
 (provide 'agent-shell-worktree)
 
