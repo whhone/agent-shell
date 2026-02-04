@@ -3260,7 +3260,7 @@ Uses AGENT-CWD to shorten file paths where necessary."
                files
                "\n\n")))
 
-(defun agent-shell-send-file (&optional prompt-for-file)
+(defun agent-shell-send-file (&optional prompt-for-file pick-shell)
   "Insert a file into `agent-shell'.
 
 If visiting a file, send this file.
@@ -3269,7 +3269,9 @@ If invoked from shell, select a project file.
 
 If invoked from `dired', use selection or region files.
 
-With prefix argument PROMPT-FOR-FILE, always prompt for file selection."
+With prefix argument PROMPT-FOR-FILE, always prompt for file selection.
+
+When PICK-SHELL is non-nil, prompt for which shell buffer to use."
   (interactive "P")
   (if (and (region-active-p)
            (buffer-file-name))
@@ -3278,10 +3280,25 @@ With prefix argument PROMPT-FOR-FILE, always prompt for file selection."
            (files (if (or in-shell prompt-for-file)
                       (list (completing-read "Send file: " (agent-shell--project-files)))
                     (or (agent-shell--buffer-files)
+                        (when (buffer-file-name)
+                          (list (buffer-file-name)))
                         (list (completing-read "Send file: " (agent-shell--project-files)))
-                        (user-error "No file to send")))))
+                        (user-error "No file to send"))))
+           (shell-buffer (when pick-shell
+                           (completing-read "Send file to shell: "
+                                            (mapcar #'buffer-name (or (agent-shell-buffers)
+                                                                      (user-error "No shells available")))
+                                            nil t))))
       (agent-shell--insert-to-shell-buffer
+       :shell-buffer shell-buffer
        :text (agent-shell--get-files-context :files files)))))
+
+(defun agent-shell-send-file-to (&optional prompt-for-file)
+  "Like `agent-shell-send-file' but prompt for which shell to use.
+
+With prefix argument PROMPT-FOR-FILE, always prompt for file selection."
+  (interactive "P")
+  (agent-shell-send-file prompt-for-file t))
 
 (cl-defun agent-shell--buffer-files (&key obvious)
   "Return buffer file(s) or `dired' selected file(s).
